@@ -23,28 +23,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 const IndividualChat = ({route}) => {
   const [showLoader, setShowLoader] = useRecoilState(showLoading);
   const {userData} = route.params;
-  // console.log('userData-->', userData);
-  //   const [messages, setMessages] = useState([]);
 
-  //   const onSignOut = () => {
-  //     signOut(auth).catch(error => console.log('Error logging out: ', error));
-  //   };
-
-  //   useLayoutEffect(() => {
-  //     navigation.setOptions({
-  //       headerRight: () => (
-  //         <TouchableOpacity
-  //           style={{
-  //             marginRight: 10,
-  //           }}
-  //           onPress={onSignOut}>
-  //           <Text>Logout</Text>
-  //         </TouchableOpacity>
-  //       ),
-  //     });
-  //   }, [navigation]);
-
-  //   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState(null);
   const senderID = auth?.currentUser?.uid;
@@ -64,46 +43,54 @@ const IndividualChat = ({route}) => {
     const messagesRef = ref(db, `chats/${chatRoomId}/messages`);
     onValue(messagesRef, snapshot => {
       const messageList = [];
-      // console.log('snapshotchi -->', snapshot);
-      // messageList.push(snapshot);
       snapshot.forEach(child => {
-        // console.log('child -->', child?.val());
+        var inputDateString = child.val().createdAt;
+
+        // Create a Date object from the input string
+        var date = new Date(inputDateString);
+
+        // Convert the UTC date to local date and time
+        var localDate = new Date(date);
+
+        // Input date string
+        var inputDateString = localDate;
+
+        // Create a Date object from the input string
+        var date = new Date(inputDateString);
+
+        // Extract date components
+        var day = date.getDate();
+        var month = date.getMonth() + 1; // Months are zero-based, so add 1
+        var year = date.getFullYear();
+        var hours = date.getHours();
+        var minutes = date.getMinutes();
+        var seconds = date.getSeconds();
+        var amOrPm = hours >= 12 ? 'PM' : 'AM';
+
+        // Adjust the hours if they are greater than 12
+        if (hours > 12) {
+          hours -= 12;
+        }
+
+        // Format the components into the desired string
+        var formattedDateString = `${day}/${month}/${year}, ${hours
+          .toString()
+          .padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds
+          .toString()
+          .padStart(2, '0')} ${amOrPm}`;
+
+        // console.log('formattedDateStringNew--->', formattedDateString);
+
         messageList.push({
           _id: child.val().id,
           text: child.val().text,
           senderID: child.val().senderID,
           receiverID: child.val().receiverID,
-          createdAt: child.val().createdAt,
+          createdAt: formattedDateString,
           images: child.val().images,
         });
       });
 
-      // const sortedMessage = messageList.sort((a, b) => {
-      //   console.log(
-      //     'Samssss->',
-      //     a.createdAt > b.createdAt ? 1 : a.createdAt < b.createdAt ? -1 : 0,
-      //   );
-      //   return a.createdAt > b.createdAt
-      //     ? 1
-      //     : a.createdAt < b.createdAt
-      //     ? -1
-      //     : 0;
-      // });
-      // function compareByDate(a, b) {
-      //   const dateA = new Date(
-      //     a.createdAt.replace(
-      //       /(\d+)\/(\d+)\/(\d+), (\d+:\d+:\d+) (AM|PM)/,
-      //       '$2/$1/$3 $4 $5',
-      //     ),
-      //   );
-      //   const dateB = new Date(
-      //     b.createdAt.replace(
-      //       /(\d+)\/(\d+)\/(\d+), (\d+:\d+:\d+) (am|pm)/,
-      //       '$2/$1/$3 $4 $5',
-      //     ),
-      //   );
-      //   return dateA - dateB;
-      // }
       const sortedMessage = messageList.sort((a, b) => {
         return a.createdAt > b.createdAt
           ? 1
@@ -111,51 +98,18 @@ const IndividualChat = ({route}) => {
           ? -1
           : 0;
       });
-      // Sort the data array by createdAt
-      // const sortedMessage = messageList.sort(compareByDate);
+
       // console.log('sortedMessage--->', sortedMessage);
       setMessages(sortedMessage);
       setShowLoader(false);
     });
-    // messagesRef.on('value', snapshot => {
-    //   const messageList = [];
-    //   snapshot.forEach(child => {
-    //     messageList.push({
-    //       id: child.key,
-    //       text: child.val().text,
-    //       senderId: child.val().senderId,
-    //     });
-    //   });
-    //   setMessages(messageList);
-    // });
   }, []);
   const handleSendMessage = async (message, photosURL) => {
     setShowLoader(true);
     const chatRoomId = await getChatRoomId(senderID, receiverID);
-    // const messagesRef = firebase.database().ref(`chats/${chatRoomId}/messages`);
-    // messagesRef.push({
-    //   text: message,
-    //   senderId: auth?.currentUser?.uid,
-    // });
-    const timestamp = new Date().toISOString();
+    const timestamp = new Date().toUTCString();
     const db = getDatabase(app);
     const messagesRef = ref(db, `chats/${chatRoomId}/messages/` + uuid.v1());
-    // await set(messagesRef, message);
-
-    const date = new Date(timestamp);
-
-    let day = date.getUTCDate();
-    let month = date.getUTCMonth() + 1; // Months are zero-based, so add 1
-    let year = date.getUTCFullYear();
-    let hours = date.getUTCHours();
-    let minutes = date.getUTCMinutes();
-    let seconds = date.getUTCSeconds();
-    let ampm = hours >= 12 ? 'PM' : 'AM';
-    // Convert to 12-hour time format
-    hours = hours % 12 || 12;
-    const updatedSeconds = seconds?.toString().length === 1 ? '0' + seconds : seconds;
-    const formattedDateTime = `${day}/${month}/${year}, ${hours}:${minutes}:${updatedSeconds} ${ampm}`;
-    // console.log('formattedDateTime--->', formattedDateTime, updatedSeconds);
 
     await set(messagesRef, {
       // ...messages,
@@ -163,42 +117,14 @@ const IndividualChat = ({route}) => {
       text: message,
       senderID: senderID,
       receiverID: receiverID,
-      createdAt: formattedDateTime,
+      createdAt: timestamp,
       images: photosURL,
     });
-    setText('');
+
     setShowLoader(false);
+    setText('');
   };
 
-  //   useEffect(() => {
-  //     const collectionRef = collection(db, 'chats');
-  //     const q = query(collectionRef, orderBy('createdAt', 'desc'));
-
-  //     const unsubscribe = onSnapshot(q, querySnapshot => {
-  //       setMessages(
-  //         querySnapshot.docs.map(doc => ({
-  //           _id: doc.data()._id,
-  //           createdAt: doc.data().createdAt.toDate(),
-  //           text: doc.data().text,
-  //           user: doc.data().user,
-  //         })),
-  //       );
-  //     });
-
-  //     return () => unsubscribe();
-  //   }, []);
-  // const onSend = useCallback((messages = []) => {
-  //   setMessages(previousMessages =>
-  //     GiftedChat.append(previousMessages, messages),
-  //   );
-  //   const {_id, createdAt, text, user} = messages[0];
-  //   addDoc(collection(db, 'chats'), {
-  //     _id,
-  //     createdAt,
-  //     text,
-  //     user,
-  //   });
-  // }, []);
   const openImagePicker = () => {
     const options = {
       mediaType: 'photo',
@@ -215,12 +141,6 @@ const IndividualChat = ({route}) => {
       } else {
         console.log('responsebase64: ', response.assets?.[0]?.fileName);
         let imageUri = response.uri || response.assets?.[0]?.uri;
-        // setSelectedImage(imageUri);
-        // setStateBase64({
-        //   fileName: response.assets?.[0]?.fileName,
-        //   fileURL: response.assets?.[0]?.base64,
-        // });
-        // setAvatar(response.assets?.[0]?.base64);
         handleSendMessage('', response.assets?.[0]?.base64);
       }
     });
@@ -253,7 +173,9 @@ const IndividualChat = ({route}) => {
                       }}>
                       {value?.text}
                     </Text>
-                    <Text style={{color: '#94766b'}}>{value?.createdAt}</Text>
+                    {value?.createdAt && (
+                      <Text style={{color: '#94766b'}}>{value?.createdAt}</Text>
+                    )}
                   </View>
                 )) ||
                   (value?.images && (
@@ -270,7 +192,11 @@ const IndividualChat = ({route}) => {
                           uri: `data:image/png;base64,${value?.images}`,
                         }}
                       />
-                      <Text>{value?.createdAt}</Text>
+                      {value?.createdAt && (
+                        <Text style={{color: '#94766b'}}>
+                          {value?.createdAt}
+                        </Text>
+                      )}
                     </View>
                   ))}
               </View>
